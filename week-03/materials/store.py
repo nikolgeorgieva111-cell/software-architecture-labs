@@ -1,13 +1,26 @@
-"""The contract every material store must fulfil. The rest of the app depends only on this."""
+
 from typing import Protocol
+
+
+class MaterialsUnavailable(Exception):
+    """The materials storage is temporarily unavailable."""
+    pass
+
+
+class MaterialNotFound(Exception):
+    """The requested material does not exist."""
+    pass
 
 
 class MaterialStore(Protocol):
     def list(self, course_id: int) -> list[str]:
-        """Names of the files of a course (empty list if none)."""
+        """Return file names. Raises MaterialsUnavailable if unavailable."""
+        ...
 
     def read(self, course_id: int, name: str) -> bytes:
-        """Content of one file."""
+        """Read a file. Raises MaterialNotFound or MaterialsUnavailable."""
+        ...
 
     def write(self, course_id: int, name: str, data: bytes) -> None:
-        """Store (or replace) one file."""
+        """Write a file. Raises MaterialsUnavailable if unavailable."""
+        ...

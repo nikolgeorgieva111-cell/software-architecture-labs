@@ -24,6 +24,7 @@ import os
 from pathlib import Path
 
 from materials.service import MaterialService
+from materials.store import MaterialsUnavailable, MaterialNotFound
 from students import STUDENTS
 
 HERE = Path(__file__).parent
@@ -38,19 +39,37 @@ def make_store():
     return LocalMaterialStore(os.environ.get("MATERIALS_ROOT", HERE / "local_materials"))
 
 
+
 def materials_command(args):
     service = MaterialService(make_store())
     action, course_id = args[0], int(args[1])
-    if action == "list":
-        for name in service.list_materials(course_id):
-            print(name)
-    elif action == "get":
-        saved = service.download(course_id, args[2], os.environ.get("DOWNLOADS_DIR", HERE / "downloads"))
-        print(f"Saved {saved}")
-    elif action == "put":
-        print(f"Uploaded {service.upload(course_id, args[2])}")
-    # WEEK 03 BUILD: what should the user see when the materials storage fails?
+
+    try:
+        if action == "list":
+            for name in service.list_materials(course_id):
+                print(name)
+
+        elif action == "get":
+            saved = service.download(
+                course_id,
+                args[2],
+                os.environ.get("DOWNLOADS_DIR", HERE / "downloads")
+            )
+            print(f"Saved {saved}")
+
+        elif action == "put":
+            print(f"Uploaded {service.upload(course_id, args[2])}")
+
+    except MaterialsUnavailable:
+        print("Materials unavailable. Please try again later.")
+        return 3
+
+    except MaterialNotFound:
+        print("Material not found.")
+        return 2
+
     return 0
+
 
 
 def main(argv):

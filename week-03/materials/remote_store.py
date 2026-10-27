@@ -1,5 +1,11 @@
-"""MaterialStore backed by the faculty file server (HTTP). See file_server.py for its API."""
-import http_util  # noqa: F401  (provided helpers: get_json, get_bytes, put_bytes)
+
+"""MaterialStore backed by the faculty file server (HTTP)."""
+
+import urllib.error
+from urllib.parse import quote
+
+import http_util
+from materials.store import MaterialsUnavailable, MaterialNotFound
 
 
 class RemoteMaterialStore:
@@ -7,13 +13,29 @@ class RemoteMaterialStore:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    # WEEK 03 BUILD: implement list / read / write by calling the file server,
-    # and decide what the caller sees when the server is down, slow, or says 404.
+    def _call(self, operation, *args):
+        try:
+            return operation(*args, timeout=self.timeout)
+
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise MaterialNotFound("Material not found") from e
+            raise MaterialsUnavailable("Server unavailable") from e
+
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            raise MaterialsUnavailable("Server unavailable") from e
+
     def list(self, course_id):
-        raise NotImplementedError("Week 03 Build: RemoteMaterialStore.list")
+        url = f"{self.base_url}/courses/{course_id}/materials"
+        result = self._call(http_util.get_json, url)
+        return result["files"]
 
     def read(self, course_id, name):
-        raise NotImplementedError("Week 03 Build: RemoteMaterialStore.read")
+        safe_name = quote(name, safe="")
+        url = f"{self.base_url}/courses/{course_id}/materials/{safe_name}"
+        return self._call(http_util.get_bytes, url)
 
     def write(self, course_id, name, data):
-        raise NotImplementedError("Week 03 Build: RemoteMaterialStore.write")
+        safe_name = quote(name, safe="")
+        url = f"{self.base_url}/courses/{course_id}/materials/{safe_name}"
+        self._call(http_util.put_bytes, url, data)

@@ -1,5 +1,6 @@
 """MaterialStore on the local disk: local_materials/course_<id>/<name>."""
 from pathlib import Path
+from materials.store import MaterialNotFound
 
 
 class LocalMaterialStore:
@@ -13,8 +14,13 @@ class LocalMaterialStore:
         folder = self._folder(course_id)
         return sorted(p.name for p in folder.iterdir() if p.is_file()) if folder.exists() else []
 
+    
     def read(self, course_id, name):
-        return (self._folder(course_id) / name).read_bytes()
+         try:
+           return (self._folder(course_id) / name).read_bytes()
+         except FileNotFoundError as e:
+           raise MaterialNotFound(f"Material '{name}' not found") from e
+
 
     def write(self, course_id, name, data):
         folder = self._folder(course_id)
