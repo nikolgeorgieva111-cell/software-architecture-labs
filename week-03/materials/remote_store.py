@@ -25,10 +25,16 @@ class RemoteMaterialStore:
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             raise MaterialsUnavailable("Server unavailable") from e
 
+    
     def list(self, course_id):
-        url = f"{self.base_url}/courses/{course_id}/materials"
-        result = self._call(http_util.get_json, url)
-        return result["files"]
+       url = f"{self.base_url}/courses/{course_id}/materials"
+       result = self._call(http_util.get_json, url)
+
+       return [
+        file["name"] if isinstance(file, dict) else file
+        for file in result["files"]
+    ]
+
 
     def read(self, course_id, name):
         safe_name = quote(name, safe="")
